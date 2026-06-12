@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<!-- Dev harness: loads the game and auto-clicks through it so a headless
+     browser screenshot reveals presenter errors. Not part of the game. -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>smoke</title>
+<link rel="stylesheet" href="css/style.css">
+<style>
+#smoke-log { position: fixed; left: 0; top: 0; z-index: 999; max-width: 28rem;
+  background: rgba(0,0,0,0.85); color: #9f9; font: 11px monospace;
+  padding: 6px 8px; white-space: pre-wrap; }
+#smoke-log .err { color: #f66; }
+</style>
+</head>
+<body>
+  <header id="toolbar" class="hidden"></header>
+  <main id="stage">
+    <div id="column">
+      <div id="scroll"></div>
+      <div id="controls"></div>
+    </div>
+  </main>
+  <div id="modal-root" class="hidden"></div>
+  <div id="toast-root"></div>
+  <div id="smoke-log"></div>
+
+  <script src="js/00-namespace.js"></script>
+  <script src="js/items.js"></script>
+  <script src="js/dice.js"></script>
+  <script src="js/state.js"></script>
+  <script src="js/combat.js"></script>
+  <script src="js/fx.js"></script>
+  <script src="js/story/helpers.js"></script>
+  <script src="js/story/prologue.js"></script>
+  <script src="js/story/act1.js"></script>
+  <script src="js/story/act2.js"></script>
+  <script src="js/story/act3.js"></script>
+  <script src="js/story/endings.js"></script>
+  <script src="js/story/index.js"></script>
+  <script src="js/engine.js"></script>
+  <script src="js/save.js"></script>
+  <script src="js/presenter.js"></script>
+  <script src="js/meta.js"></script>
+  <script src="js/map.js"></script>
+  <script src="js/main.js"></script>
+  <script>
+  (function () {
+    const logEl = document.getElementById("smoke-log");
+    let lastScene = null;
+    function log(msg, cls) {
+      const line = document.createElement("div");
+      if (cls) line.className = cls;
+      line.textContent = msg;
+      logEl.appendChild(line);
+    }
+    window.addEventListener("error", (e) => log("ERROR: " + e.message, "err"));
+    window.addEventListener("unhandledrejection",
+      (e) => log("REJECTION: " + (e.reason && e.reason.message || e.reason), "err"));
+
+    const params = new URLSearchParams(location.search);
+    const maxSteps = Number(params.get("steps") || 40);
+    try { localStorage.removeItem(HC.save.KEY); } catch (e) {}
+
+    // Force instant speed for the run WITHOUT polluting the player's stored
+    // setting: cycleSpeed persists to hc_speed, so put the original back
+    // (the presenter only reads it at boot).
+    const origSpeed = localStorage.getItem("hc_speed");
+    function forceInstant() {
+      if (HC.presenter.getSpeed() === "instant") return;
+      while (HC.presenter.getSpeed() !== "instant") HC.presenter.cycleSpeed();
+      if (origSpeed === null) localStorage.removeItem("hc_speed");
+      else localStorage.setItem("hc_speed", origSpeed);
+    }
+
+    let steps = 0;
+    function tick() {
+      if (steps++ > maxSteps) { log("smoke: step budget spent"); return; }
+      forceInstant();
+      const state = HC.presenter.getState();
+      if (state && state.scene !== lastScene) {
+        lastScene = state.scene;
+        log(`scene: ${lastScene}  hp:${state.player.hp} gold:${state.player.gold} karma:${state.karma}`);
+      }
+      const q = (sel) => document.querySelector(sel);
+      // ?map=1: when an ending screen appears, open the map and halt there
+      // (lets a headless --screenshot capture the open overlay).
+      if (params.get("map")) {
+        const mapBtn = Array.from(document.querySelectorAll(".choice-list .btn"))
+          .find((b) => b.textContent.indexOf("map of roads") !== -1);
+        if (mapBtn) {
+          mapBtn.click();
+          log("smoke: map opened, halting");
+          return;
+        }
+      }
+      const input = q(".name-entry input");
+      const mapClose = q("#map-overlay .map-close");
+      const cont = q(".continue-btn");
+      const modalBtn = q("#modal-root .btn");
+      const combatBtn = q("#combat-panel .action-bar .btn:not([disabled])");
+      const choiceBtns = document.querySelectorAll(".choice-list .btn");
+      const choice = choiceBtns.length
+        ? choiceBtns[Math.floor(Math.random() * choiceBtns.length)] : null;
+      const titleBtns = document.querySelectorAll("#title-screen .btn");
+      if (input) {
+        input.value = "Smoke";
+        q(".name-entry button").click();
+        log("smoke: entered name");
+      } else if (mapClose) {
+        log("smoke: closed map overlay");
+        mapClose.click();
+      } else if (modalBtn) {
+        modalBtn.click();
+      } else if (cont) {
+        cont.click();
+      } else if (combatBtn) {
+        combatBtn.click();
+      } else if (choice) {
+        choice.click();
+      } else if (titleBtns.length) {
+        titleBtns[titleBtns.length - 1].click();
+        log("smoke: begin anew");
+      }
+      setTimeout(tick, 100);
+    }
+    setTimeout(tick, 400);
+  })();
+  </script>
+</body>
+</html>

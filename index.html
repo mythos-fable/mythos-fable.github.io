@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mythos's Fable — Chapter 1: The Hollow Crown</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Crimson+Pro:ital,wght@0,400;0,600;1,400;1,600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header id="toolbar" class="hidden"></header>
+  <main id="stage">
+    <div id="column">
+      <div id="scroll"></div>
+      <div id="controls"></div>
+    </div>
+  </main>
+  <div id="modal-root" class="hidden"></div>
+  <div id="toast-root"></div>
+
+  <!-- Load order matters: namespace → data → logic → story → engine → UI.
+       Plain scripts (no modules) so the game runs straight off file://. -->
+  <script src="js/00-namespace.js"></script>
+  <script src="js/items.js"></script>
+  <script src="js/dice.js"></script>
+  <script src="js/state.js"></script>
+  <script src="js/combat.js"></script>
+  <script src="js/fx.js"></script>
+  <script src="js/story/helpers.js"></script>
+  <script src="js/story/prologue.js"></script>
+  <script src="js/story/act1.js"></script>
+  <script src="js/story/act2.js"></script>
+  <script src="js/story/act3.js"></script>
+  <script src="js/story/endings.js"></script>
+  <script src="js/story/index.js"></script>
+  <script src="js/engine.js"></script>
+  <script src="js/save.js"></script>
+  <script src="js/presenter.js"></script>
+  <script src="js/meta.js"></script>
+  <script src="js/map.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>

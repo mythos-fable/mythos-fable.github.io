@@ -157,8 +157,9 @@
   // -------------------------------------------------------- save / load
   function loadableSlot(n) {
     const slot = HC.save.readSlot(n);
-    const scenes = HC.presenter.getScenes();
-    if (!slot || !(slot.state.scene in scenes) || slot.state.scene === "death") {
+    if (!slot) return null;
+    const scenes = HC.buildChapterScenes(slot.chapter);
+    if (!scenes || !(slot.state.scene in scenes) || slot.state.scene === "death") {
       return null;
     }
     return slot;
@@ -181,8 +182,10 @@
     const p = slot.state.player;
     label.appendChild(el("div", "entry-name", `Slot ${n} — ${p.name}, level ${p.level}`));
     const when = slot.saved_at ? new Date(slot.saved_at).toLocaleString() : "";
+    const def = HC.getChapter(slot.chapter);
+    const chap = def ? `Chapter ${def.number}` : slot.chapter;
     label.appendChild(el("div", "entry-sub",
-      `HP ${p.hp}/${p.max_hp} · ${p.gold} gold${when ? ` · ${when}` : ""}`));
+      `${chap} · HP ${p.hp}/${p.max_hp} · ${p.gold} gold${when ? ` · ${when}` : ""}`));
     return label;
   }
 

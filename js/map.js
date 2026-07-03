@@ -68,14 +68,16 @@
     return { nodes, edges, missingDyn };
   }
 
-  /* Layered layout. Layer = BFS shortest distance from "intro" (cycle-safe);
-     every ending scene is forced into one shared final column. Within each
-     column, a few barycenter sweeps reduce edge crossings. Returns center
-     positions plus the graph bounds. */
+  /* Layered layout. Layer = BFS shortest distance from the seed scenes
+     (cycle-safe); a fixed-entry chapter has one seed, a continuation chapter
+     seeds every entry point at layer zero. Every ending scene is forced into
+     one shared final column. Within each column, a few barycenter sweeps
+     reduce edge crossings. Returns center positions plus the graph bounds. */
   const COL_W = 230;
   const ROW_H = 48;
 
-  function layout(graph) {
+  function layout(graph, seeds) {
+    seeds = (seeds && seeds.length ? seeds : ["intro"]).filter((s) => graph.nodes[s]);
     const ids = Object.keys(graph.nodes);
     const out = {}; // id -> [targets]
     const inc = {}; // id -> [sources]
@@ -88,18 +90,19 @@
       }
     }
 
-    // BFS layers from intro
+    // BFS layers from the seeds
     const layerOf = {};
-    if (graph.nodes.intro) {
-      layerOf.intro = 0;
-      const queue = ["intro"];
-      while (queue.length) {
-        const id = queue.shift();
-        for (const t of out[id]) {
-          if (!(t in layerOf)) {
-            layerOf[t] = layerOf[id] + 1;
-            queue.push(t);
-          }
+    const queue = [];
+    for (const s of seeds) {
+      layerOf[s] = 0;
+      queue.push(s);
+    }
+    while (queue.length) {
+      const id = queue.shift();
+      for (const t of out[id]) {
+        if (!(t in layerOf)) {
+          layerOf[t] = layerOf[id] + 1;
+          queue.push(t);
         }
       }
     }
@@ -158,37 +161,45 @@
   }
 
   // ------------------------------------------- exploration memory (browser)
-  const MEM_KEY = "hollow_crown_map_v1";
-  let memCache = null;
+  // One memory blob per chapter. Chapter 1 keeps its pre-chapters key
+  // (manifest mapKey override) so existing exploration carries over.
+  const memCache = {};
 
-  function mem() {
-    if (memCache) return memCache;
+  function memKey(chapterId) {
+    const def = HC.getChapter && HC.getChapter(chapterId);
+    return (def && def.mapKey) || `mythos_fable_map_${chapterId}`;
+  }
+
+  function mem(chapterId) {
+    if (memCache[chapterId]) return memCache[chapterId];
     let m = null;
-    try { m = JSON.parse(localStorage.getItem(MEM_KEY)); } catch (e) { /* ignore */ }
+    try { m = JSON.parse(localStorage.getItem(memKey(chapterId))); } catch (e) { /* ignore */ }
     if (!m || typeof m !== "object") m = {};
     m.scenes = m.scenes || {};
     m.edges = m.edges || {};
     m.endings = m.endings || {};
-    memCache = m;
+    memCache[chapterId] = m;
     return m;
   }
 
-  function persistMem() {
-    try { localStorage.setItem(MEM_KEY, JSON.stringify(mem())); } catch (e) { /* ignore */ }
+  function persistMem(chapterId) {
+    try {
+      localStorage.setItem(memKey(chapterId), JSON.stringify(mem(chapterId)));
+    } catch (e) { /* ignore */ }
   }
 
-  function recordVisit(id) {
-    if (!mem().scenes[id]) { mem().scenes[id] = 1; persistMem(); }
+  function recordVisit(chapterId, id) {
+    if (!mem(chapterId).scenes[id]) { mem(chapterId).scenes[id] = 1; persistMem(chapterId); }
   }
-  function recordEdge(from, to) {
+  function recordEdge(chapterId, from, to) {
     const key = `${from}>${to}`;
-    if (!mem().edges[key]) { mem().edges[key] = 1; persistMem(); }
+    if (!mem(chapterId).edges[key]) { mem(chapterId).edges[key] = 1; persistMem(chapterId); }
   }
-  function recordEnding(title) {
-    if (!mem().endings[title]) { mem().endings[title] = 1; persistMem(); }
+  function recordEnding(chapterId, title) {
+    if (!mem(chapterId).endings[title]) { mem(chapterId).endings[title] = 1; persistMem(chapterId); }
   }
-  function hasEndingRecorded() {
-    return Object.keys(mem().endings).length > 0;
+  function hasEndingRecorded(chapterId) {
+    return Object.keys(mem(chapterId).endings).length > 0;
   }
 
   // ------------------------------------------------- Part B: SVG rendering
@@ -218,13 +229,15 @@
     return humanize(node.id);
   }
 
-  function open(opts) {
+  function open(chapterId, opts) {
     opts = opts || {};
     if (document.getElementById("map-overlay")) return;
-    const scenes = HC.presenter.getScenes();
+    const def = HC.getChapter(chapterId);
+    const scenes = HC.buildChapterScenes(chapterId);
+    const seeds = HC.chapterMapSeeds(chapterId);
     const graph = buildGraph(scenes);
-    const lay = layout(graph);
-    const m = mem();
+    const lay = layout(graph, seeds);
+    const m = mem(chapterId);
 
     const path = opts.path || [];
     const pathSet = new Set(path);
@@ -240,7 +253,8 @@
     const overlay = el("div");
     overlay.id = "map-overlay";
     const bar = el("div", "map-bar");
-    bar.appendChild(el("h2", "map-title", "THE MAP OF ROADS"));
+    bar.appendChild(el("h2", "map-title",
+      `THE MAP OF ROADS — CHAPTER ${def.number}: ${def.title.toUpperCase()}`));
     const seenCount = Object.keys(scenes).filter(isVisited).length;
     bar.appendChild(el("div", "map-count",
       `${seenCount} of ${Object.keys(scenes).length} places walked · ` +
@@ -344,8 +358,10 @@
       const rect = canvas.getBoundingClientRect();
       const graphH = (lay.maxY - lay.minY) + ROW_H * 2;
       view.k = Math.min(1, Math.max(0.3, (rect.height - 40) / graphH));
-      const start = lay.pos.intro || { x: 0, y: 0 };
-      view.x = 70 - (start.x - boxW.intro / 2) * view.k;
+      const startId = seeds[0];
+      const start = (startId && lay.pos[startId]) || { x: 0, y: 0 };
+      const startW = (startId && boxW[startId]) || 44;
+      view.x = 70 - (start.x - startW / 2) * view.k;
       view.y = rect.height / 2 - start.y * view.k;
       apply();
     }

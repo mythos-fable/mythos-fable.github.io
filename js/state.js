@@ -91,6 +91,7 @@
   class GameState {
     constructor() {
       this.player = new Player();
+      this.chapter = "ch1";
       this.scene = "intro";
       this.entered = null; // scene whose on_enter has already fired
       this.karma = 0;
@@ -165,7 +166,8 @@
     toDict() {
       const p = this.player;
       return {
-        version: 1,
+        version: 2,
+        chapter: this.chapter,
         scene: this.scene,
         entered: this.entered,
         path: this.path,
@@ -182,12 +184,15 @@
 
     static fromDict(data) {
       const s = new GameState();
+      s.chapter = data.chapter || "ch1"; // version-1 payloads predate chapters
       s.scene = data.scene;
       s.entered = data.entered !== undefined ? data.entered : null;
       s.path = Array.isArray(data.path) ? data.path : [];
       s.karma = data.karma;
       s.flags = data.flags;
-      s.companions = data.companions;
+      // overlay onto the constructor's defaults so companions added in later
+      // chapters exist even when loading an older save
+      Object.assign(s.companions, data.companions);
       const pd = data.player;
       const p = s.player;
       p.name = pd.name; p.background = pd.background;

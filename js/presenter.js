@@ -11,6 +11,8 @@
   const P = {
     state: null,
     scenes: null,
+    chapterId: null,
+    chapterDef: null,
     speed: "normal",
     reduceMotion: false,
     currentSkip: null,   // finishes the current animation instantly
@@ -383,9 +385,9 @@
     scrollBottom();
   }
 
-  async function playEnding(title) {
+  async function playEnding(title, endingSceneId) {
     P.state.ending = title;
-    HC.map.recordEnding(title);
+    HC.map.recordEnding(P.chapterId, title);
     const scroll = $("#scroll");
     await waitNext();
 
@@ -393,13 +395,14 @@
     scrollBottom();
     await waitNext();
 
-    if (HC.story.epilogue) {
-      await playBeats(splitBeats(HC.story.epilogue(P.state)), false);
+    const epilogue = HC.story[P.chapterDef.epilogue];
+    if (epilogue) {
+      await playBeats(splitBeats(epilogue(P.state)), false);
       await waitNext();
     }
 
     const footer = el("div", "footer-beat");
-    footer.appendChild(el("div", "thanks", "Thank you for playing The Hollow Crown."));
+    footer.appendChild(el("div", "thanks", P.chapterDef.thanks));
     footer.appendChild(el("div", "", `Final karma ${P.state.karma >= 0 ? "+" : ""}${P.state.karma}   ·   Level ${P.state.player.level}`));
     scroll.appendChild(footer);
 
@@ -409,10 +412,10 @@
       btn.addEventListener("click", fn);
       list.appendChild(btn);
     };
-    if (title === "An Unmarked Grave") {
+    if (endingSceneId === "death") {
       // Death is not always the end of a tale: the autosave still points at
       // the last camp (the engine never saves a transition into "death").
-      const saved = HC.save.read();
+      const saved = HC.save.read(P.chapterId);
       if (saved && saved.scene in P.scenes && saved.scene !== "death") {
         addBtn("Rise from your last camp", () => {
           P.state = saved;
@@ -421,7 +424,14 @@
         });
       }
     }
-    addBtn("View the map of roads", () => HC.map.open({ path: P.state.path }));
+    const next = HC.chapterAfter(P.chapterId);
+    if (next && next.entry.kind === "continuation"
+        && next.entry.points[endingSceneId]) {
+      addBtn(`Continue the tale — Chapter ${next.number}: ${next.title}`, () => {
+        HC.main.openChapterStart(next.id, { preselect: endingSceneId });
+      });
+    }
+    addBtn("View the map of roads", () => HC.map.open(P.chapterId, { path: P.state.path }));
     addBtn("Return to the title", () => HC.main.showTitle());
     $("#controls").appendChild(list);
     scrollBottom();
@@ -432,7 +442,7 @@
     const revisit = id === P.lastLeftScene; // e.g. the merchant's shop loop
     const data = HC.engine.enterScene(P.state, P.scenes, id);
     if (P.state.path[P.state.path.length - 1] !== id) P.state.path.push(id);
-    HC.map.recordVisit(id);
+    HC.map.recordVisit(P.chapterId, id);
     HC.meta.setToolbarVisible(true);
     await clearStage();
 
@@ -446,7 +456,10 @@
     await playBeats(splitBeats(data.text), revisit);
 
     if (data.ending !== null) {
-      await playEnding(data.ending);
+      // Snapshot the full character at the moment the ending is reached;
+      // this is what the next chapter imports when continuing from here.
+      HC.profile.recordEnding(P.chapterId, id, P.state.toDict());
+      await playEnding(data.ending, id);
       return;
     }
 
@@ -478,7 +491,7 @@
     await resolveStatPicks();
 
     P.state.scene = target;
-    HC.map.recordEdge(id, target);
+    HC.map.recordEdge(P.chapterId, id, target);
     if (target !== "death") HC.save.write(P.state);
     playScene(target, { preNotices, roll, postNotices });
   }
@@ -519,17 +532,20 @@
   }
 
   HC.presenter = {
-    init(scenes) {
-      P.scenes = scenes;
+    init() {
       bindInput();
     },
     start(state, sceneId) {
       P.state = state;
+      P.chapterId = state.chapter;
+      P.chapterDef = HC.getChapter(state.chapter);
+      P.scenes = HC.buildChapterScenes(state.chapter);
       P.lastLeftScene = null;
       playScene(sceneId !== undefined ? sceneId : state.scene, {});
     },
     getState() { return P.state; },
     getScenes() { return P.scenes; },
+    getChapterId() { return P.chapterId; },
     getSpeed() { return P.speed; },
     cycleSpeed,
     clearStage,

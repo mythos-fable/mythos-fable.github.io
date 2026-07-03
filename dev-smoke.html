@@ -37,9 +37,17 @@
   <script src="js/story/act2.js"></script>
   <script src="js/story/act3.js"></script>
   <script src="js/story/endings.js"></script>
+  <script src="js/story/c2/data.js"></script>
+  <script src="js/story/c2/openings.js"></script>
+  <script src="js/story/c2/act1.js"></script>
+  <script src="js/story/c2/act2.js"></script>
+  <script src="js/story/c2/act3.js"></script>
+  <script src="js/story/c2/endings.js"></script>
   <script src="js/story/index.js"></script>
+  <script src="js/chapters.js"></script>
   <script src="js/engine.js"></script>
   <script src="js/save.js"></script>
+  <script src="js/profile.js"></script>
   <script src="js/presenter.js"></script>
   <script src="js/meta.js"></script>
   <script src="js/map.js"></script>
@@ -119,8 +127,11 @@
       } else if (choice) {
         choice.click();
       } else if (titleBtns.length) {
-        titleBtns[titleBtns.length - 1].click();
-        log("smoke: begin anew");
+        // chapter menu: prefer a Begin button (the save was cleared above)
+        const begin = Array.from(titleBtns)
+          .find((b) => b.textContent.indexOf("Begin") !== -1);
+        (begin || titleBtns[titleBtns.length - 1]).click();
+        log("smoke: begin");
       }
       setTimeout(tick, 100);
     }

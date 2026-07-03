@@ -113,7 +113,8 @@
 
       if (ending !== null) {
         state.ending = ending;
-        if (HC.story && HC.story.epilogue) HC.story.epilogue(state); // exercise dynamic text
+        const epilogue = opts.epilogue || (HC.story && HC.story.epilogue);
+        if (epilogue) epilogue(state); // exercise dynamic text
         return state.ending;
       }
 

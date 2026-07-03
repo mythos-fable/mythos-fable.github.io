@@ -394,6 +394,52 @@ body {
 #title-screen .title-buttons .btn { text-align: center; }
 #title-screen .save-hint { color: var(--grey); font-size: 0.85em; margin-top: 0.6rem; }
 
+#title-screen .btn-primary {
+  border-color: var(--gold);
+  color: var(--gold);
+  box-shadow: 0 0 24px rgba(201, 165, 84, 0.12);
+}
+
+/* ------------------------------------------------------- chapter menu */
+.chapter-list { max-width: 30rem; margin: 2.2rem auto 0; text-align: left; }
+.chapter-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 0.9rem 1.1rem;
+  margin-bottom: 0.9rem;
+}
+.chapter-card .chapter-head {
+  font-family: var(--font-ui);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--gold);
+}
+.chapter-card .chapter-sub {
+  color: var(--grey);
+  font-style: italic;
+  font-size: 0.92em;
+  margin-top: 0.15rem;
+}
+.chapter-card .chapter-actions { margin-top: 0.7rem; }
+.chapter-card .chapter-actions .btn {
+  display: inline-block;
+  width: auto;
+  margin: 0 0.5rem 0.4rem 0;
+  padding: 0.35rem 0.9rem;
+}
+.chapter-card .endings-count {
+  color: var(--grey);
+  font-size: 0.8em;
+  margin-top: 0.3rem;
+}
+.chapter-card.locked { opacity: 0.55; }
+.chapter-card .chapter-sealed {
+  color: var(--grey);
+  font-size: 0.9em;
+  margin-top: 0.5rem;
+}
+
 .name-entry { max-width: 26rem; margin: 2.5rem auto 0; text-align: center; }
 .name-entry input {
   width: 100%;

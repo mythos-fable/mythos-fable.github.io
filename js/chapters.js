@@ -1,6 +1,10 @@
 /* Chapter manifest: the single registry of every released chapter.
-   Releasing a new chapter = add its story module files + script tags in
-   index.html + one entry here (see RELEASING.md).
+
+   Chapter 1 predates the pack format and stays hardcoded below (its legacy
+   save/map keys and title<->id ending table must never change). Every later
+   chapter is a pack: one file under js/story/packs/ calling
+   HC.registerChapter(spec), plus optional part files calling
+   HC.registerScenes(chapterId, SCENES). See CHAPTER_AUTHORING.md.
 
    Entry kinds:
      { kind: "fixed", scene }  — chapter starts at one scene (chapter 1).
@@ -8,6 +12,9 @@
         — chapter starts from a previous chapter's ending. `points` maps
           that chapter's ending scene ids to entry scenes here; an ending
           missing from `points` (e.g. "death") cannot be continued from.
+   For packs the whole entry block is derived: `points` from the opening
+   scenes' entry_from markers, import/preset from HC.bridge.makeEntry, and
+   the endings table from the scenes bearing `ending:`.
 
    The `endings` table doubles as the title<->id mapping used to migrate
    pre-chapters map memory (title-keyed) into the id-keyed profile. */
@@ -41,48 +48,125 @@
         { id: "death",            title: "An Unmarked Grave", isDeath: true },
       ],
     },
-    {
-      id: "ch2",
-      number: 2,
-      title: "The Unwoven Shore",
-      subtitle: "a tale of debts older than gods",
-      modules: ["c2_openings", "c2_act1", "c2_act2", "c2_act3", "c2_endings"],
-      epilogue: "c2_epilogue",
-      thanks: "Thank you for playing The Unwoven Shore.",
-      entry: {
-        kind: "continuation",
-        from: "ch1",
-        points: {
-          end_chained_god:  "c2_open_chained",
-          end_new_shepherd: "c2_open_dawn",
-          end_tyrant:       "c2_open_ash",
-          end_uneasy_god:   "c2_open_grey",
-          end_mortal_age:   "c2_open_mortal",
-          end_serra:        "c2_open_serra",
-          end_maeve:        "c2_open_maeve",
-          end_hollow_god:   "c2_open_hollow",
-          end_last_witness: "c2_open_witness",
-        },
-        importState: (snapshot, endingId) =>
-          HC.story.c2_data.importState(snapshot, endingId),
-        presetState: (endingId) =>
-          HC.story.c2_data.presetState(endingId),
-      },
-      endings: [
-        { id: "c2_end_tidemother",  title: "The New Tidemother" },
-        { id: "c2_end_paid",        title: "The Debt Paid" },
-        { id: "c2_end_rook",        title: "The Rook's Lien" },
-        { id: "c2_end_hearing",     title: "The First Hearing" },
-        { id: "c2_end_adrift",      title: "The Unmoored Shore" },
-        { id: "c2_end_oshka",       title: "The Brine-Crowned" },
-        { id: "c2_end_vex",         title: "The Forgiven Ledger" },
-        { id: "c2_end_woven",       title: "The Woven Shore" },
-        { id: "c2_end_last_harbor", title: "The Last Harbor" },
-        { id: "death",              title: "Taken by the Tide", isDeath: true },
-      ],
-    },
   ];
 
+  // ------------------------------------------------------- pack registry
+  /* Packs register while their script tags load; finalizeChapters() (called
+     at boot, and defensively by buildChapterScenes) derives the manifest
+     entries once every part file has contributed its scenes. */
+  const pending = {}; // chapter id -> { spec, scenes, openings }
+
+  function assignNew(target, source, what, chapterId) {
+    for (const key of Object.keys(source || {})) {
+      if (key in target) {
+        throw new Error(`${chapterId}: ${what} id '${key}' already exists`);
+      }
+      target[key] = source[key];
+    }
+  }
+
+  HC.registerChapter = function (spec) {
+    if (!Number.isInteger(spec.number) || spec.number < 2) {
+      throw new Error("registerChapter: spec.number must be an integer >= 2");
+    }
+    const id = `ch${spec.number}`;
+    if (HC.getChapter(id) || pending[id]) {
+      throw new Error(`registerChapter: chapter '${id}' already registered`);
+    }
+    if (!spec.title) throw new Error(`${id}: pack needs a title`);
+    if (!spec.bridge) throw new Error(`${id}: pack needs a bridge config`);
+    if ((spec.bridge.flagCarryover || []).includes("ws")) {
+      throw new Error(`${id}: 'ws' must not be in flagCarryover (set per chapter by the bridge)`);
+    }
+
+    assignNew(HC.COMPANION_DEFS, spec.companions, "companion", id);
+    assignNew(HC.COMPANION_LINES, spec.companionLines, "companion lines", id);
+    assignNew(HC.ITEMS, spec.items, "item", id);
+    assignNew(HC.ENEMIES, spec.enemies, "enemy", id);
+
+    HC.story = HC.story || {};
+    const moduleName = `c${spec.number}_pack`;
+    const scenes = {};
+    HC.story[moduleName] = { SCENES: scenes };
+    if (spec.epilogue) HC.story[`c${spec.number}_epilogue`] = spec.epilogue;
+
+    pending[id] = { spec, scenes, openings: {} };
+    if (spec.scenes) HC.registerScenes(id, spec.scenes);
+  };
+
+  HC.registerScenes = function (chapterId, SCENES) {
+    const p = pending[chapterId];
+    if (!p) {
+      throw new Error(`registerScenes: unknown chapter '${chapterId}' `
+        + "(its registerChapter pack file must load first)");
+    }
+    const { openings } = HC.dsl.compileScenes(chapterId, p.spec.number, SCENES);
+    for (const sid of Object.keys(SCENES)) {
+      if (sid in p.scenes) throw new Error(`${chapterId}: duplicate scene id '${sid}'`);
+      p.scenes[sid] = SCENES[sid];
+    }
+    Object.assign(p.openings, openings);
+  };
+
+  /* Turn every pending pack into a full HC.CHAPTERS entry. Idempotent. */
+  HC.finalizeChapters = function () {
+    const ids = Object.keys(pending);
+    if (!ids.length) return;
+
+    for (const id of ids) {
+      const { spec, scenes, openings } = pending[id];
+      delete pending[id];
+
+      const endings = [];
+      for (const [sid, scene] of Object.entries(scenes)) {
+        if ("ending" in scene) {
+          endings.push(sid === "death"
+            ? { id: sid, title: scene.ending, isDeath: true }
+            : { id: sid, title: scene.ending });
+        }
+      }
+
+      const points = {};   // prev ending id -> entry scene here
+      const wsByEnding = {};
+      const presets = {};
+      for (const [sid, mark] of Object.entries(openings)) {
+        if (mark.entry_from in points) {
+          throw new Error(`${id}: two opening scenes for ending '${mark.entry_from}'`);
+        }
+        points[mark.entry_from] = sid;
+        wsByEnding[mark.entry_from] = mark.ws;
+        presets[mark.entry_from] = mark.preset;
+      }
+
+      const def = {
+        id,
+        number: spec.number,
+        title: spec.title,
+        subtitle: spec.subtitle || "",
+        modules: [`c${spec.number}_pack`],
+        thanks: spec.thanks || `Thank you for playing ${spec.title}.`,
+        endings,
+        continuation: { points, wsByEnding, presets },
+        bridge: spec.bridge,
+        entry: {
+          kind: "continuation",
+          from: spec.from || `ch${spec.number - 1}`,
+          points,
+        },
+      };
+      if (HC.story[`c${spec.number}_epilogue`]) {
+        def.epilogue = `c${spec.number}_epilogue`;
+      }
+      const made = HC.bridge.makeEntry(def);
+      def.entry.importState = made.importState;
+      def.entry.presetState = made.presetState;
+
+      HC.CHAPTERS.push(def);
+    }
+    HC.CHAPTERS.sort((a, b) => a.number - b.number);
+  };
+
+  // ------------------------------------------------------------- lookups
   HC.getChapter = (id) => HC.CHAPTERS.find((c) => c.id === id) || null;
 
   HC.chapterAfter = function (id) {
@@ -93,6 +177,7 @@
   // memoized per-chapter scene dicts
   const cache = {};
   HC.buildChapterScenes = function (chapterId) {
+    HC.finalizeChapters();
     if (!cache[chapterId]) {
       const def = HC.getChapter(chapterId);
       if (!def) return null;

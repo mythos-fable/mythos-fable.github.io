@@ -545,7 +545,6 @@ all the time there is about to be.'`,
     return parts.join("\n\n");
   }
 
-  HC.story = HC.story || {};
-  HC.story.c2_endings = { SCENES };
+  HC.registerScenes("ch2", SCENES);
   HC.story.c2_epilogue = epilogue;
 })(globalThis.HC);

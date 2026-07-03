@@ -9,7 +9,8 @@ Python terminal game in `../mythos`, which stays frozen at chapter 1) and
 been discovered and can be started from *each* ending you have found.
 Finishing a chapter snapshots your character; Chapter 2 imports it (or uses a
 curated per-ending preset for endings discovered before snapshots existed).
-See `../RELEASING.md` for how chapters are structured and released.
+See `CHAPTER_AUTHORING.md` for how chapters are structured, written, and
+released (one pack file per chapter; the manifest is derived by convention).
 
 ## Playing
 
@@ -46,9 +47,9 @@ See `../RELEASING.md` for how chapters are structured and released.
   just-finished route is highlighted in gold. Exploration memory is
   per-chapter (`hollow_crown_map_v1` for chapter 1, `mythos_fable_map_chN`
   after); once a chapter has a recorded ending, its card gains a *Map*
-  button. Function-valued `goto`s in the story are mirrored in `DYN_TARGETS`
-  (map.js), which the selftest asserts against the story so they can't
-  drift.
+  button. Chapter 1's function-valued `goto`s are mirrored in `DYN_TARGETS`
+  (map.js, frozen); pack chapters declare dynamic targets inline in the
+  scene instead, and the selftest asserts nothing is missing either way.
 
 ## Layout
 
@@ -56,8 +57,10 @@ See `../RELEASING.md` for how chapters are structured and released.
 | --- | --- |
 | `js/items.js`, `js/dice.js`, `js/state.js`, `js/combat.js`, `js/fx.js` | DOM-free ports of the Python game logic |
 | `js/story/*.js` | Chapter 1 scene data, translated 1:1 from `mythos/story/*.py` |
-| `js/story/c2/*.js` | Chapter 2 scene data + `data.js` (presets, state import, new companions/items/enemies) |
-| `js/chapters.js` | Chapter manifest: modules, entry points, ending tables (see `../RELEASING.md`) |
+| `js/story/packs/*.js` | Chapter packs: one manifest per chapter (`HC.registerChapter`), see `CHAPTER_AUTHORING.md` |
+| `js/story/c2/*.js` | Chapter 2 scene data (part files registering into the ch2 pack) |
+| `js/dsl.js`, `js/bridge.js` | Declarative scene DSL compiler; generic chapter-continuation bridge |
+| `js/chapters.js` | Chapter registry: the hardcoded chapter 1 entry + pack registration/finalization |
 | `js/profile.js` | Cross-chapter progress: discovered endings, end-of-chapter snapshots, unlock rules |
 | `js/engine.js` | Event-driven scene engine (`enterScene` / `transition` / `runHeadless`) |
 | `js/presenter.js`, `js/meta.js`, `js/main.js` | Typewriter presenter, info modals, chapter menu |
@@ -71,10 +74,13 @@ stripped before display and ignored by the crosscheck).
 ## Validation (Node, no browser needed)
 
 ```
-node selftest.js            # static graph checks, golden paths, 300 random runs
-node selftest.js --runs 60  # fewer random runs
-node selftest.js --dump     # normalized scene-graph JSON
-node crosscheck.js          # diff the JS port against the Python story sources
+node selftest.js                 # static graph checks, golden paths, 300 random
+                                 # runs, chapter wiring, chain runs (all chapters)
+node selftest.js --chapter chN   # fast loop while authoring one chapter
+node selftest.js --runs 60       # fewer ch1 random runs
+node selftest.js --dump          # normalized ch1 scene-graph JSON
+node selftest.js --dump-chapter chN   # any chapter's normalized scene graph
+node crosscheck.js               # diff the JS port against the Python story sources
 ```
 
 `crosscheck.js` tokenizes `mythos/story/*.py` directly (no Python runtime

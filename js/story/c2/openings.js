@@ -1,8 +1,9 @@
 /* Chapter 2 openings: nine roads to the Unwoven Shore, one per Chapter 1
    ending. Each is a playable sequence that establishes the world your choice
    made, then walks you to the gates of Saltmere, where the chapter proper
-   begins. The ws flag (set by data.js when the chapter starts) is already in
-   place when these scenes run. */
+   begins. Each opening carries the pack entry markers (entry_from / ws /
+   preset); the ws flag (set by the bridge when the chapter starts) is
+   already in place when these scenes run. */
 (function (HC) {
   "use strict";
 
@@ -12,6 +13,9 @@
 
     // ================================================== THE CHAINED GOD (vael)
     "c2_open_chained": {
+      entry_from: "end_chained_god",
+      ws: "vael",
+      preset: { karma: 25, flags: { final_reforged: true } },
       text: (s) => `One year since the Wound closed. One year since you put the Crown back
 on the brow of a being who had begged three thousand years to set it
 down, and the world — the whole, green, rescued world — called it a
@@ -168,6 +172,13 @@ and he can't reach it, and I'd say that's why you exist.'
 
     // ============================================ THE SHEPHERD WHO VISITS (you_dawn)
     "c2_open_dawn": {
+      entry_from: "end_new_shepherd",
+      ws: "you_dawn",
+      preset: {
+        karma: 45,
+        stats: { might: 3, wits: 3, spirit: 3 },
+        flags: { final_claimed: true },
+      },
       text: (s) => `Holding the world is like holding water: it is not heavy, it is
 EVERYWHERE. A year into the watch and you have stopped translating
 the sensations into mortal terms — the harvests are a warmth along
@@ -292,6 +303,21 @@ who can hold something.'
 
     // ================================================== THE CROWN OF ASH (you_ash)
     "c2_open_ash": {
+      entry_from: "end_tyrant",
+      ws: "you_ash",
+      preset: {
+        karma: -55,
+        stats: { might: 4, wits: 3, spirit: 1 },
+        gold: 120,
+        inventory: ["wyrmglass_dagger", "rook_mail", "elixir", "poultice"],
+        companions: {
+          serra:  { met: true, in_party: false, approval: -50, alive: true },
+          vex:    { met: true, in_party: false, approval: -10, alive: true },
+          maeve:  { met: true, in_party: false, approval: -35, alive: true },
+          hollow: { met: true, in_party: false, approval: -45, alive: true },
+        },
+        flags: { final_claimed: true },
+      },
       text: (s) => `The world is yours. This stopped being a metaphor a year ago.
 
 The harvests come first to the loyal, as designed. The grey pools
@@ -384,6 +410,9 @@ home, at the brow that wore the lid of the world —
 
     // ================================================== THE UNEASY GOD (you_grey)
     "c2_open_grey": {
+      entry_from: "end_uneasy_god",
+      ws: "you_grey",
+      preset: { karma: 0, flags: { final_claimed: true } },
       text: (s) => `'Watch the watcher,' the old woman prayed, to no one, to you, and you
 made it a holy day because it was the only honest prayer you'd heard
 from the chair. A year on, Watcher's Eve is kept in every township:
@@ -485,6 +514,14 @@ in you needs a moment to place:
 
     // ================================================== THE MORTAL AGE (mortal)
     "c2_open_mortal": {
+      entry_from: "end_mortal_age",
+      ws: "mortal",
+      preset: {
+        karma: 20,
+        inventory: ["soldiers_blade", "leather_jerkin", "poultice", "poultice",
+                    "bread", "bread"],
+        flags: { final_destroyed: true },
+      },
       text: (s) => `The age has no god and the sky has no lamps and the world, which can
 no longer pray its problems upward, has invented the committee.
 
@@ -616,6 +653,18 @@ travels. Mind yourself, Breaker.'`,
 
     // ================================================== THE RISEN SHIELD (serra)
     "c2_open_serra": {
+      entry_from: "end_serra",
+      ws: "serra",
+      preset: {
+        karma: 30,
+        companions: {
+          serra:  { met: true, in_party: false, approval: 70, alive: true },
+          vex:    { met: true, in_party: false, approval: 15, alive: true },
+          maeve:  { met: true, in_party: false, approval: 25, alive: true },
+          hollow: { met: true, in_party: false, approval: 30, alive: true },
+        },
+        flags: { final_companion: true, crowned_serra: true },
+      },
       text: (s) => `You crowned her on the floor of the world, and the world has been
 FAIR ever since, which is rarer and harder and stranger to live under
 than kindness.
@@ -752,6 +801,19 @@ the way she would, and step off her map.`,
 
     // ================================================== THE OPEN LIBRARY (maeve)
     "c2_open_maeve": {
+      entry_from: "end_maeve",
+      ws: "maeve",
+      preset: {
+        karma: 25,
+        stats: { might: 2, wits: 4, spirit: 2 },
+        companions: {
+          serra:  { met: true, in_party: false, approval: 30, alive: true },
+          vex:    { met: true, in_party: false, approval: 20, alive: true },
+          maeve:  { met: true, in_party: false, approval: 70, alive: true },
+          hollow: { met: true, in_party: false, approval: 30, alive: true },
+        },
+        flags: { final_companion: true, crowned_maeve: true },
+      },
       text: (s) => `The age of the first literate god is loud, argumentative, blasphemous
 by every old standard, and the grey country thrives in it like a bog
 in the rain.
@@ -889,6 +951,18 @@ everywhere.`,
 
     // ================================================== THE QUIET SHEPHERD (hollow)
     "c2_open_hollow": {
+      entry_from: "end_hollow_god",
+      ws: "hollow",
+      preset: {
+        karma: 35,
+        companions: {
+          serra:  { met: true, in_party: false, approval: 30, alive: true },
+          vex:    { met: true, in_party: false, approval: 20, alive: true },
+          maeve:  { met: true, in_party: false, approval: 25, alive: true },
+          hollow: { met: true, in_party: false, approval: 75, alive: true },
+        },
+        flags: { final_companion: true, crowned_hollow: true },
+      },
       text: (s) => `The chapels of the new age have no murals. Rows of plain lamps,
 always lit; a third stair that turns; a ladle on two pegs where the
 altar would go. He still answers every asking — that's the whole
@@ -1022,6 +1096,15 @@ toward the bell.`,
 
     // ================================================== THE LAST WITNESS (unmade)
     "c2_open_witness": {
+      entry_from: "end_last_witness",
+      ws: "unmade",
+      preset: {
+        karma: -10,
+        stats: { might: 2, wits: 3, spirit: 4 },
+        gold: 0,
+        inventory: ["wyrmglass_dagger", "shield_cloak", "elixir"],
+        flags: { final_witness: true, met_merchant: true },
+      },
       text: (s) => `The world has been still for — you've stopped counting in years. The
 Merchant counts in ENTRIES, and the catalogue is one million and some
 hundreds of thousands of entries long now: the folding of coats, the
@@ -1128,6 +1211,5 @@ opened up.'`,
     },
   };
 
-  HC.story = HC.story || {};
-  HC.story.c2_openings = { SCENES };
+  HC.registerScenes("ch2", SCENES);
 })(globalThis.HC);

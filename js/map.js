@@ -11,9 +11,11 @@
 
   // -------------------------------------------------- Part A: graph model
 
-  /* The three function-valued gotos in the story and the targets they can
-     resolve to. Keyed "<sceneId>#<choiceIndex>". selftest.js asserts this
-     table matches the story exactly, so edits there can't silently drift. */
+  /* Chapter 1's three function-valued gotos and the targets they can
+     resolve to, keyed "<sceneId>#<choiceIndex>". Frozen: pack chapters
+     declare their dynamic targets inline instead (the DSL compiler puts
+     them on the function as fn.targets), so this table never grows.
+     selftest.js asserts it matches the ch1 story exactly. */
   const DYN_TARGETS = {
     "barrow_throne#1": ["aldous_lie_lantern", "aldous_lie"],
     "road_wound#4": ["vex_ambush", "monastery_gate"],
@@ -41,26 +43,27 @@
         ending: typeof scene.ending === "string" ? scene.ending : null,
       };
       (scene.choices || []).forEach((ch, i) => {
-        if ("goto" in ch) {
-          if (typeof ch.goto === "function") {
-            const dyn = DYN_TARGETS[`${id}#${i}`];
-            if (!dyn) missingDyn.push(`${id}#${i} (goto)`);
-            else for (const t of dyn) addEdge(id, t, "fate");
-          } else {
-            addEdge(id, ch.goto, "choice");
+        /* A function-valued target must declare where it can go: fn.targets
+           (set by the pack DSL), or the legacy ch1 DYN_TARGETS table for
+           gotos. Anything else is a validation failure. */
+        function target(t, kind, slot, dynKind) {
+          if (typeof t !== "function") {
+            addEdge(id, t, kind);
+            return;
           }
+          const declared = t.targets
+            || (slot === "goto" ? DYN_TARGETS[`${id}#${i}`] : null);
+          if (!declared) missingDyn.push(`${id}#${i} (${slot})`);
+          else for (const to of declared) addEdge(id, to, dynKind || kind);
         }
+        if ("goto" in ch) target(ch.goto, "choice", "goto", "fate");
         if (ch.check) {
-          if (typeof ch.check.ok === "function") missingDyn.push(`${id}#${i} (check.ok)`);
-          if (typeof ch.check.fail === "function") missingDyn.push(`${id}#${i} (check.fail)`);
-          addEdge(id, ch.check.ok, "check-ok");
-          addEdge(id, ch.check.fail, "check-fail");
+          target(ch.check.ok, "check-ok", "check.ok");
+          target(ch.check.fail, "check-fail", "check.fail");
         }
         if (ch.combat) {
-          if (typeof ch.combat.win === "function") missingDyn.push(`${id}#${i} (combat.win)`);
-          if (typeof ch.combat.flee === "function") missingDyn.push(`${id}#${i} (combat.flee)`);
-          addEdge(id, ch.combat.win, "combat");
-          addEdge(id, ch.combat.flee, "flee");
+          target(ch.combat.win, "combat", "combat.win");
+          if ("flee" in ch.combat) target(ch.combat.flee, "flee", "combat.flee");
           addEdge(id, "death", "combat");
         }
       });

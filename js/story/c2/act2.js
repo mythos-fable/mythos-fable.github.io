@@ -1491,6 +1491,5 @@ original note is invited.`,
     },
   };
 
-  HC.story = HC.story || {};
-  HC.story.c2_act2 = { SCENES };
+  HC.registerScenes("ch2", SCENES);
 })(globalThis.HC);

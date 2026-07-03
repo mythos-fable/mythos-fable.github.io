@@ -636,6 +636,5 @@ THE KNOWING ALLOWS.`,
     },
   };
 
-  HC.story = HC.story || {};
-  HC.story.c2_act3 = { SCENES };
+  HC.registerScenes("ch2", SCENES);
 })(globalThis.HC);

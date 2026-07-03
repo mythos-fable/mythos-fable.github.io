@@ -20,8 +20,10 @@
   <div id="modal-root" class="hidden"></div>
   <div id="toast-root"></div>
 
-  <!-- Load order matters: namespace → data → logic → story → engine → UI.
-       Plain scripts (no modules) so the game runs straight off file://. -->
+  <!-- Load order matters: namespace → data → framework → story → engine → UI.
+       Plain scripts (no modules) so the game runs straight off file://.
+       Each chapter pack (js/story/packs/chN.js) loads before its part files.
+       Keep this list mirrored in dev-smoke.html. -->
   <script src="js/00-namespace.js"></script>
   <script src="js/items.js"></script>
   <script src="js/dice.js"></script>
@@ -29,19 +31,21 @@
   <script src="js/combat.js"></script>
   <script src="js/fx.js"></script>
   <script src="js/story/helpers.js"></script>
+  <script src="js/dsl.js"></script>
+  <script src="js/chapters.js"></script>
+  <script src="js/bridge.js"></script>
   <script src="js/story/prologue.js"></script>
   <script src="js/story/act1.js"></script>
   <script src="js/story/act2.js"></script>
   <script src="js/story/act3.js"></script>
   <script src="js/story/endings.js"></script>
-  <script src="js/story/c2/data.js"></script>
+  <script src="js/story/index.js"></script>
+  <script src="js/story/packs/ch2.js"></script>
   <script src="js/story/c2/openings.js"></script>
   <script src="js/story/c2/act1.js"></script>
   <script src="js/story/c2/act2.js"></script>
   <script src="js/story/c2/act3.js"></script>
   <script src="js/story/c2/endings.js"></script>
-  <script src="js/story/index.js"></script>
-  <script src="js/chapters.js"></script>
   <script src="js/engine.js"></script>
   <script src="js/save.js"></script>
   <script src="js/profile.js"></script>

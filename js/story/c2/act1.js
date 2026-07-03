@@ -1345,6 +1345,5 @@ that isn't there.`,
     },
   };
 
-  HC.story = HC.story || {};
-  HC.story.c2_act1 = { SCENES };
+  HC.registerScenes("ch2", SCENES);
 })(globalThis.HC);

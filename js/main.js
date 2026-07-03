@@ -184,7 +184,7 @@
     screen.appendChild(el("div", "chapter", `Chapter ${def.number}: ${def.title}`));
     screen.appendChild(el("div", "subtitle", def.subtitle));
     screen.appendChild(el("div", "subtitle",
-      `Every tale of the Unwoven Shore begins where a tale of ${prev.title} ended. `
+      `Every tale of ${def.title} begins where a tale of ${prev.title} ended. `
       + "Which ending does this one follow?"));
 
     const list = el("div", "chapter-list");
@@ -293,6 +293,7 @@
   }
 
   function boot() {
+    HC.finalizeChapters();
     HC.profile.migrate();
     HC.presenter.init();
     HC.meta.initToolbar();

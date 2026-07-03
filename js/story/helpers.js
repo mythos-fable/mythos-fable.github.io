@@ -19,6 +19,9 @@
     karma_le: (n) => (s) => s.karma <= n,
     all_of: (...preds) => (s) => preds.every((p) => p(s)),
     any_of: (...preds) => (s) => preds.some((p) => p(s)),
+    // world-state (the `ws` flag a continuation chapter starts with)
+    ws: (...vals) => (s) => vals.includes(s.flag("ws")),
+    ws_not: (...vals) => (s) => !vals.includes(s.flag("ws")),
   };
 
   /* Companions whose patience has run out leave at camp. Returns farewell text. */
